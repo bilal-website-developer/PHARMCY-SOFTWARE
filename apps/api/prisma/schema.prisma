@@ -1,0 +1,236 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  PHARMACIST
+  CASHIER
+  INVENTORY
+  ACCOUNTANT
+}
+
+enum DrugClass {
+  OTC
+  RX
+  CONTROLLED
+  NARCOTIC
+}
+
+enum StorageCondition {
+  ROOM_TEMPERATURE
+  COOL
+  COLD_REFRIGERATED
+  FROZEN
+}
+
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  DISCONTINUED
+}
+
+enum SupplierStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model User {
+  id           String      @id @default(uuid())
+  username     String      @unique
+  email        String      @unique
+  passwordHash String
+  fullName     String
+  role         Role        @default(CASHIER)
+  isActive     Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  auditLogs    AuditLog[]
+  priceChanges PriceHistory[]
+
+  @@map("users")
+}
+
+model SystemSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  userName  String?
+  role      String?
+  action    String   // e.g. "USER_LOGIN", "UPDATE_PRICE", "CREATE_PRODUCT"
+  entity    String   // e.g. "User", "Product", "Supplier"
+  entityId  String?
+  oldValue  Json?
+  newValue  Json?
+  reason    String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([action])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("categories")
+}
+
+model Company {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  code      String?   @unique
+  country   String    @default("Pakistan")
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("companies")
+}
+
+model Supplier {
+  id                  String         @id @default(uuid())
+  name                String
+  code                String         @unique
+  contactPerson       String?
+  phone               String
+  email               String?
+  address             String?
+  taxNumber           String?        // NTN / STRN
+  paymentTermsDays    Int            @default(30)
+  openingBalancePaisa Int            @default(0) // Integer paisa
+  currentBalancePaisa Int            @default(0) // Integer paisa
+  status              SupplierStatus @default(ACTIVE)
+  products            Product[]
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  @@index([code])
+  @@index([name])
+  @@map("suppliers")
+}
+
+model Product {
+  id                    String           @id @default(uuid())
+  sku                   String           @unique
+  name                  String           // Brand Name (e.g. Panadol 500mg)
+  urduName              String?          // e.g. پیناڈول
+  genericName           String           // Active Salt/Formula (e.g. Paracetamol)
+  strength              String           // e.g. 500mg, 10ml
+  dosageForm            String           // e.g. Tablet, Syrup, Capsule
+  drugClass             DrugClass        @default(OTC)
+  storageCondition      StorageCondition @default(ROOM_TEMPERATURE)
+  
+  categoryId            String?
+  category              Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  
+  companyId             String?
+  company               Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  
+  primarySupplierId     String?
+  primarySupplier       Supplier?        @relation(fields: [primarySupplierId], references: [id], onDelete: SetNull)
+  
+  minStockLevel         Int              @default(10) // In smallest base unit
+  maxStockLevel         Int              @default(100) // In smallest base unit
+  currentStock          Int              @default(0)  // In smallest base unit
+  rackLocation          String?          // e.g. "Rack A-04"
+  taxRatePct            Float            @default(0.0) // Sales tax percentage
+  status                ProductStatus    @default(ACTIVE)
+  requiresPrescription  Boolean          @default(false)
+  isLooseSellingEnabled Boolean          @default(false)
+  loosePricePaisa       Int?             // Override price per smallest unit in paisa
+  
+  mrpPaisa              Int              // Retail price in paisa per pack/base
+  costPricePaisa        Int?             // Purchase cost in paisa (NEVER exposed to Cashier)
+  
+  units                 ProductUnit[]
+  barcodes              ProductBarcode[]
+  priceHistory          PriceHistory[]
+
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  @@index([name])
+  @@index([genericName])
+  @@index([genericName, strength]) // For instant substitutes lookup
+  @@index([sku])
+  @@index([status])
+  @@index([categoryId])
+  @@index([companyId])
+  @@map("products")
+}
+
+model ProductUnit {
+  id                   String   @id @default(uuid())
+  productId            String
+  unitName             String   // "Carton", "Box", "Strip", "Tablet"
+  conversionFactor     Int      // How many base smallest units this unit equals (e.g. 100 for Box, 10 for Strip, 1 for Tablet)
+  isBaseUnit           Boolean  @default(false) // True for the indivisible smallest unit
+  isDefaultSellingUnit Boolean  @default(false)
+  barcode              String?
+  pricePaisa           Int?     // Unit-specific price in paisa (optional)
+  
+  product              Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, unitName])
+  @@index([productId])
+  @@map("product_units")
+}
+
+model ProductBarcode {
+  id        String   @id @default(uuid())
+  productId String
+  barcode   String   @unique
+  unitName  String?  // e.g. Pack vs Strip vs Carton
+  isPrimary Boolean  @default(false)
+  
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([barcode])
+  @@index([productId])
+  @@map("product_barcodes")
+}
+
+model PriceHistory {
+  id                String   @id @default(uuid())
+  productId         String
+  oldMrpPaisa       Int
+  newMrpPaisa       Int
+  oldCostPricePaisa Int?
+  newCostPricePaisa Int?
+  changeReason      String?  // e.g. "Annual manufacturer price revision", "DRAP regulatory update"
+  changedByUserId   String?
+  changedByName     String?
+  createdAt         DateTime @default(now())
+
+  product           Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user              User?    @relation(fields: [changedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([productId])
+  @@index([createdAt])
+  @@map("price_history")
+}

@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* THEME TOKENS: Pharma Green - Defined ONCE here */
+  --color-primary: #15803D;
+  --color-accent: #22C55E;
+  --color-surface: #F0FDF4;
+  --color-white: #FFFFFF;
+  --color-danger: #DC2626;
+  --color-text: #14532D;
+  --color-muted: #6B8F7B;
+  --color-warning: #F59E0B;
+
+  --radius-default: 12px;
+}
+
+@layer base {
+  * {
+    border-color: rgba(107, 143, 123, 0.2);
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+}
+
+/* Custom utility components matching the Pharma specification */
+@layer components {
+  /* White rounded rows inside a pale-green panel */
+  .pharma-panel {
+    background-color: var(--color-surface);
+    border: 1px solid rgba(107, 143, 123, 0.25);
+    border-radius: var(--radius-default);
+    padding: 1.25rem;
+  }
+
+  .pharma-card-row {
+    background-color: var(--color-white);
+    border-radius: var(--radius-default);
+    border: 1px solid rgba(107, 143, 123, 0.15);
+    box-shadow: 0 1px 3px 0 rgba(20, 83, 45, 0.04);
+    transition: all 0.15s ease-in-out;
+  }
+
+  .pharma-card-row:hover {
+    border-color: rgba(34, 197, 94, 0.4);
+    box-shadow: 0 4px 6px -1px rgba(20, 83, 45, 0.08);
+  }
+
+  /* Form action pair: Save (green) and Cancel (red) as a full-width pair at bottom of forms */
+  .pharma-form-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    width: 100%;
+    margin-top: 1.5rem;
+  }
+}

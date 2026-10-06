@@ -1,0 +1,33 @@
+{
+  "name": "pharmacy-management-system",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:web": "npm run dev --workspace=@pharmacy/web",
+    "dev:api": "npm run dev --workspace=@pharmacy/api",
+    "build": "npm run build --workspaces --if-present",
+    "build:web": "npm run build --workspace=@pharmacy/web",
+    "build:api": "npm run build --workspace=@pharmacy/api",
+    "lint": "npm run lint --workspaces --if-present",
+    "docker:db:up": "docker compose up -d",
+    "docker:db:down": "docker compose down",
+    "prisma:generate": "npm run prisma:generate --workspace=@pharmacy/api",
+    "prisma:migrate": "npm run prisma:migrate --workspace=@pharmacy/api",
+    "prisma:seed": "npm run prisma:seed --workspace=@pharmacy/api"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  },
+  "allowScripts": {
+    "@prisma/client@5.22.0": true,
+    "prisma@5.22.0": true,
+    "@prisma/engines@5.22.0": true,
+    "esbuild@0.28.2": true,
+    "esbuild@0.21.5": true
+  }
+}
