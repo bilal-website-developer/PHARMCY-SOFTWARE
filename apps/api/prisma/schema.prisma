@@ -40,18 +40,115 @@ enum SupplierStatus {
   INACTIVE
 }
 
+enum BatchStatus {
+  ACTIVE
+  NEAR_EXPIRY
+  EXPIRED
+  QUARANTINE
+  RETURNED
+  EXPIRED_CLAIM_PENDING // Expired stock submitted for supplier claim
+}
+
+enum StockMovementType {
+  PURCHASE
+  SALE
+  PURCHASE_RETURN
+  SALE_RETURN
+  ADJUSTMENT_ADD
+  ADJUSTMENT_DAMAGE
+  ADJUSTMENT_EXPIRED
+}
+
+enum PurchaseStatus {
+  DRAFT
+  CONFIRMED
+  CANCELLED
+}
+
+enum SaleStatus {
+  POSTED   // Finalized, read-only
+  VOIDED   // Cancelled with reason
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  JAZZCASH
+  EASYPAISA
+  BANK_TRANSFER
+  CREDIT
+}
+
+enum HeldBillStatus {
+  HELD
+  RESUMED
+  EXPIRED
+}
+
+enum ReturnDestination {
+  RESTOCK_ORIGINAL_BATCH
+  DAMAGED_QUARANTINE
+}
+
+enum RefundMethod {
+  CASH
+  CREDIT
+}
+
+enum ReturnStatus {
+  COMPLETED
+  VOIDED
+}
+
+enum CustomerType {
+  WALK_IN
+  REGULAR
+  CORPORATE
+  DOCTOR_CLINIC
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
+enum CustomerLedgerEntryType {
+  CREDIT_SALE
+  SALE_RETURN_CREDIT
+  PAYMENT_RECEIVED
+  OPENING_BALANCE
+}
+
+enum SupplierLedgerEntryType {
+  PURCHASE_BILL
+  PURCHASE_RETURN_DEBIT
+  PAYMENT_MADE
+  EXPIRY_CLAIM_CREDIT_NOTE
+  OPENING_BALANCE
+}
+
+enum ExpiryClaimStatus {
+  CLAIM_PENDING
+  CREDIT_NOTE_RECEIVED
+  ADJUSTED
+}
+
 model User {
-  id           String      @id @default(uuid())
-  username     String      @unique
-  email        String      @unique
-  passwordHash String
-  fullName     String
-  role         Role        @default(CASHIER)
-  isActive     Boolean     @default(true)
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  auditLogs    AuditLog[]
-  priceChanges PriceHistory[]
+  id               String            @id @default(uuid())
+  username         String            @unique
+  email            String            @unique
+  passwordHash     String
+  fullName         String
+  role             Role              @default(CASHIER)
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  auditLogs        AuditLog[]
+  priceChanges     PriceHistory[]
+  createdPurchases Purchase[]        @relation("PurchaseCreator")
+  stockMovements   StockMovement[]
+  adjustments      StockAdjustment[]
 
   @@map("users")
 }
@@ -71,8 +168,8 @@ model AuditLog {
   userId    String?
   userName  String?
   role      String?
-  action    String   // e.g. "USER_LOGIN", "UPDATE_PRICE", "CREATE_PRODUCT"
-  entity    String   // e.g. "User", "Product", "Supplier"
+  action    String   // e.g. "USER_LOGIN", "UPDATE_PRICE", "CONFIRM_PURCHASE"
+  entity    String   // e.g. "User", "Product", "Purchase", "StockBatch"
   entityId  String?
   oldValue  Json?
   newValue  Json?
@@ -126,6 +223,11 @@ model Supplier {
   currentBalancePaisa Int            @default(0) // Integer paisa
   status              SupplierStatus @default(ACTIVE)
   products            Product[]
+  purchases           Purchase[]
+  ledgerEntries       SupplierLedgerEntry[]
+  payments            SupplierPayment[]
+  debitNotes          PurchaseReturnDebitNote[]
+  expiryClaims        ExpiryClaim[]
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
 
@@ -135,44 +237,49 @@ model Supplier {
 }
 
 model Product {
-  id                    String           @id @default(uuid())
-  sku                   String           @unique
-  name                  String           // Brand Name (e.g. Panadol 500mg)
-  urduName              String?          // e.g. پیناڈول
-  genericName           String           // Active Salt/Formula (e.g. Paracetamol)
-  strength              String           // e.g. 500mg, 10ml
-  dosageForm            String           // e.g. Tablet, Syrup, Capsule
-  drugClass             DrugClass        @default(OTC)
-  storageCondition      StorageCondition @default(ROOM_TEMPERATURE)
+  id                    String            @id @default(uuid())
+  sku                   String            @unique
+  name                  String            // Brand Name (e.g. Panadol 500mg)
+  urduName              String?           // e.g. پیناڈول
+  genericName           String            // Active Salt/Formula (e.g. Paracetamol)
+  strength              String            // e.g. 500mg, 10ml
+  dosageForm            String            // e.g. Tablet, Syrup, Capsule
+  drugClass             DrugClass         @default(OTC)
+  storageCondition      StorageCondition  @default(ROOM_TEMPERATURE)
   
   categoryId            String?
-  category              Category?        @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  category              Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   
   companyId             String?
-  company               Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  company               Company?          @relation(fields: [companyId], references: [id], onDelete: SetNull)
   
   primarySupplierId     String?
-  primarySupplier       Supplier?        @relation(fields: [primarySupplierId], references: [id], onDelete: SetNull)
+  primarySupplier       Supplier?         @relation(fields: [primarySupplierId], references: [id], onDelete: SetNull)
   
-  minStockLevel         Int              @default(10) // In smallest base unit
-  maxStockLevel         Int              @default(100) // In smallest base unit
-  currentStock          Int              @default(0)  // In smallest base unit
-  rackLocation          String?          // e.g. "Rack A-04"
-  taxRatePct            Float            @default(0.0) // Sales tax percentage
-  status                ProductStatus    @default(ACTIVE)
-  requiresPrescription  Boolean          @default(false)
-  isLooseSellingEnabled Boolean          @default(false)
-  loosePricePaisa       Int?             // Override price per smallest unit in paisa
+  minStockLevel         Int               @default(10) // Smallest base unit
+  maxStockLevel         Int               @default(100) // Smallest base unit
+  currentStock          Int               @default(0)  // Smallest base unit
+  rackLocation          String?           // e.g. "Rack A-04"
+  taxRatePct            Float             @default(0.0) // Sales tax percentage
+  status                ProductStatus     @default(ACTIVE)
+  requiresPrescription  Boolean           @default(false)
+  isNonReturnable       Boolean           @default(false) // Blocks sales returns if true (e.g. cold-chain biologics)
+  isLooseSellingEnabled Boolean           @default(false)
+  loosePricePaisa       Int?              // Price in paisa per smallest unit
   
-  mrpPaisa              Int              // Retail price in paisa per pack/base
-  costPricePaisa        Int?             // Purchase cost in paisa (NEVER exposed to Cashier)
+  mrpPaisa              Int               // Retail price in paisa per pack/base
+  costPricePaisa        Int?              // Purchase cost in paisa (NEVER exposed to Cashier)
   
   units                 ProductUnit[]
   barcodes              ProductBarcode[]
   priceHistory          PriceHistory[]
+  purchaseItems         PurchaseItem[]
+  batches               StockBatch[]
+  stockMovements        StockMovement[]
+  adjustments           StockAdjustment[]
 
-  createdAt             DateTime         @default(now())
-  updatedAt             DateTime         @updatedAt
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
 
   @@index([name])
   @@index([genericName])
@@ -188,8 +295,8 @@ model ProductUnit {
   id                   String   @id @default(uuid())
   productId            String
   unitName             String   // "Carton", "Box", "Strip", "Tablet"
-  conversionFactor     Int      // How many base smallest units this unit equals (e.g. 100 for Box, 10 for Strip, 1 for Tablet)
-  isBaseUnit           Boolean  @default(false) // True for the indivisible smallest unit
+  conversionFactor     Int      // Multiplier to base smallest units
+  isBaseUnit           Boolean  @default(false)
   isDefaultSellingUnit Boolean  @default(false)
   barcode              String?
   pricePaisa           Int?     // Unit-specific price in paisa (optional)
@@ -205,7 +312,7 @@ model ProductBarcode {
   id        String   @id @default(uuid())
   productId String
   barcode   String   @unique
-  unitName  String?  // e.g. Pack vs Strip vs Carton
+  unitName  String?
   isPrimary Boolean  @default(false)
   
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
@@ -222,7 +329,7 @@ model PriceHistory {
   newMrpPaisa       Int
   oldCostPricePaisa Int?
   newCostPricePaisa Int?
-  changeReason      String?  // e.g. "Annual manufacturer price revision", "DRAP regulatory update"
+  changeReason      String?
   changedByUserId   String?
   changedByName     String?
   createdAt         DateTime @default(now())
@@ -234,3 +341,650 @@ model PriceHistory {
   @@index([createdAt])
   @@map("price_history")
 }
+
+model Purchase {
+  id                String         @id @default(uuid())
+  supplierId        String
+  billNumber        String         // Supplier invoice / bill number
+  billDate          DateTime
+  totalAmountPaisa  Int            // Gross total in paisa
+  discountPaisa     Int            @default(0) // Bill-level or aggregated discount
+  taxPaisa          Int            @default(0) // Aggregated sales tax
+  netPayablePaisa   Int            // Net payable amount in paisa
+  paidAmountPaisa   Int            @default(0) // Immediate payment recorded
+  status            PurchaseStatus @default(CONFIRMED)
+  voidReason        String?        // Mandatory reason if cancelled/voided
+  voidedAt          DateTime?
+  voidedById        String?
+  voidedByName      String?
+  billAttachmentUrl String?        // URL or base64 photo of supplier invoice
+  notes             String?
+  createdById       String?
+
+  supplier          Supplier       @relation(fields: [supplierId], references: [id])
+  createdBy         User?          @relation("PurchaseCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  items             PurchaseItem[]
+  stockMovements    StockMovement[]
+
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  @@unique([supplierId, billNumber]) // Prevent duplicate bill numbers per supplier!
+  @@index([supplierId])
+  @@index([billNumber])
+  @@index([billDate])
+  @@map("purchases")
+}
+
+model PurchaseItem {
+  id                          String      @id @default(uuid())
+  purchaseId                  String
+  productId                   String
+  batchNumber                 String
+  expiryDate                  DateTime
+  quantity                    Int         // Quantity in entered unit (e.g. 5 boxes)
+  unitName                    String      // e.g. "Box", "Strip", "Pack"
+  conversionFactor            Int         @default(1)
+  bonusQuantity               Int         @default(0) // Free bonus units from supplier
+  tradePricePaisa             Int         // Unit trade price in paisa
+  discountPct                 Float       @default(0.0)
+  taxPct                      Float       @default(0.0)
+  mrpPaisa                    Int         // Retailing MRP at time of purchase
+  totalSmallestUnits          Int         // (quantity + bonusQuantity) * conversionFactor
+  costPerSmallestUnitPaisa    Int         // Effective cost per smallest unit in paisa
+
+  purchase                    Purchase    @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  product                     Product     @relation(fields: [productId], references: [id])
+  stockBatches                StockBatch[]
+
+  @@index([purchaseId])
+  @@index([productId])
+  @@map("purchase_items")
+}
+
+model StockBatch {
+  id               String            @id @default(uuid())
+  productId        String
+  batchNumber      String
+  expiryDate       DateTime
+  quantity         Int               // Current in-stock quantity in smallest base unit
+  initialQuantity  Int               // Quantity initially stocked in smallest base unit
+  costPricePaisa   Int               // Purchase cost per smallest unit in paisa
+  mrpPaisa         Int               // Retail MRP in paisa
+  status           BatchStatus       @default(ACTIVE)
+  purchaseItemId   String?
+
+  product          Product           @relation(fields: [productId], references: [id])
+  purchaseItem     PurchaseItem?     @relation(fields: [purchaseItemId], references: [id], onDelete: SetNull)
+  movements        StockMovement[]
+  adjustments      StockAdjustment[]
+
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@unique([productId, batchNumber])
+  @@index([productId, expiryDate]) // Optimized for FEFO batch pick (earliest expiry first)
+  @@index([status])
+  @@map("stock_batches")
+}
+
+model StockMovement {
+  id            String            @id @default(uuid())
+  productId     String
+  batchId       String
+  movementType  StockMovementType
+  quantity      Int               // Inflow = positive (+), Outflow = negative (-)
+  balanceAfter  Int               // Smallest unit balance after this movement
+  referenceType String            // "PURCHASE", "SALE", "ADJUSTMENT", "RETURN"
+  referenceId   String            // Reference entity ID (e.g. purchaseId)
+  reason        String?
+  createdById   String?
+  createdAt     DateTime          @default(now())
+
+  purchaseId    String?
+  purchase      Purchase?         @relation(fields: [purchaseId], references: [id], onDelete: SetNull)
+  product       Product           @relation(fields: [productId], references: [id])
+  batch         StockBatch        @relation(fields: [batchId], references: [id])
+  user          User?             @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([batchId])
+  @@index([productId])
+  @@index([movementType])
+  @@index([createdAt])
+  @@map("stock_movements")
+}
+
+model StockAdjustment {
+  id                    String            @id @default(uuid())
+  productId             String
+  batchId               String
+  adjustmentType        StockMovementType // ADJUSTMENT_DAMAGE, ADJUSTMENT_EXPIRED, ADJUSTMENT_ADD
+  quantitySmallestUnits Int
+  reason                String            // Mandatory audit trail justification
+  authorizedById        String?
+  createdAt             DateTime          @default(now())
+
+  product               Product           @relation(fields: [productId], references: [id])
+  batch                 StockBatch        @relation(fields: [batchId], references: [id])
+  authorizedBy          User?             @relation(fields: [authorizedById], references: [id], onDelete: SetNull)
+
+  @@index([batchId])
+  @@index([productId])
+  @@map("stock_adjustments")
+}
+
+// ─── PHASE 1C: POS SALES ─────────────────────────────────────────────────────
+
+model InvoiceCounter {
+  id      String @id @default(uuid())
+  nextNum Int    @default(1)
+
+  @@map("invoice_counter")
+}
+
+model Sale {
+  id              String      @id @default(uuid())
+  invoiceNumber   String      @unique
+  saleDate        DateTime    @default(now())
+  status          SaleStatus  @default(POSTED)
+  voidReason      String?     // Mandatory justification for voided bills
+  voidedAt        DateTime?
+  voidedById      String?
+  voidedByName    String?
+
+  subtotalPaisa       Int       @default(0)
+  discountPaisa       Int       @default(0)
+  taxPaisa            Int       @default(0)
+  grandTotalPaisa     Int       @default(0)
+  paidPaisa           Int       @default(0)
+  changePaisa         Int       @default(0)
+
+  requiresRx      Boolean     @default(false)
+  doctorName      String?
+  patientName     String?
+  patientPhone    String?
+
+  customerId            String?
+  customerName          String?
+  isCreditSale          Boolean     @default(false)
+  creditApprovedById    String?
+  creditApprovedByName  String?
+
+  cashierId       String?
+  cashierName     String?
+
+  customer        Customer?   @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  items           SaleItem[]
+  payments        Payment[]
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([saleDate])
+  @@index([status])
+  @@index([cashierId])
+  @@index([customerId])
+  @@map("sales")
+}
+
+model SaleItem {
+  id                    String   @id @default(uuid())
+  saleId                String
+  productId             String
+  productName           String
+  productSku            String
+  batchId               String
+  batchNumber           String
+  expiryDate            DateTime
+
+  unitName              String
+  conversionFactor      Int      @default(1)
+  quantityInUnit        Int
+  quantitySmallestUnits Int
+
+  mrpPaisaPerUnit       Int
+  discountPct           Float    @default(0.0)
+  taxPct                Float    @default(0.0)
+  lineTotalPaisa        Int
+
+  sale                  Sale     @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  @@index([saleId])
+  @@index([productId])
+  @@index([batchId])
+  @@map("sale_items")
+}
+
+model Payment {
+  id          String        @id @default(uuid())
+  saleId      String
+  method      PaymentMethod
+  amountPaisa Int
+
+  sale        Sale          @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  @@index([saleId])
+  @@map("payments")
+}
+
+model HeldBill {
+  id          String          @id @default(uuid())
+  label       String?
+  status      HeldBillStatus  @default(HELD)
+  billData    Json
+  cashierId   String?
+  cashierName String?
+  createdAt   DateTime        @default(now())
+  resumedAt   DateTime?
+
+  @@index([status])
+  @@index([cashierId])
+  @@map("held_bills")
+}
+
+// ─── PHASE 1D: SALES RETURNS & REFUNDS ───────────────────────────────────────
+
+model SaleReturn {
+  id                 String            @id @default(uuid())
+  returnNumber       String            @unique // RET-YYYYMM-000001
+  saleId             String?
+  saleInvoiceNumber  String?
+  returnDate         DateTime          @default(now())
+  status             ReturnStatus      @default(COMPLETED)
+  refundMethod       RefundMethod      @default(CASH)
+  totalRefundPaisa   Int               @default(0)
+  reason             String            // Reason for return
+  needsApproval      Boolean           @default(false)
+  isApproved         Boolean           @default(true)
+  approvedById       String?
+  approvedByName     String?
+  cashierId          String?
+  cashierName        String?
+  notes              String?
+  items              SaleReturnItem[]
+
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@index([returnNumber])
+  @@index([saleInvoiceNumber])
+  @@index([returnDate])
+  @@index([status])
+  @@map("sale_returns")
+}
+
+model SaleReturnItem {
+  id                      String            @id @default(uuid())
+  saleReturnId            String
+  saleItemId              String?
+  productId               String
+  productName             String
+  batchId                 String
+  batchNumber             String
+  unitName                String
+  conversionFactor        Int               @default(1)
+  quantityInUnit          Int
+  quantitySmallestUnits   Int
+  refundPricePaisaPerUnit Int
+  lineTotalRefundPaisa    Int
+  destination             ReturnDestination @default(RESTOCK_ORIGINAL_BATCH)
+  reason                  String?
+
+  saleReturn              SaleReturn        @relation(fields: [saleReturnId], references: [id], onDelete: Cascade)
+
+  @@index([saleReturnId])
+  @@index([productId])
+  @@index([batchId])
+  @@map("sale_return_items")
+}
+
+// ─── PHASE 2A: CREDIT CUSTOMERS & LEDGERS ────────────────────────────────────
+
+model Customer {
+  id                  String         @id @default(uuid())
+  name                String
+  phone               String         @unique
+  email               String?
+  address             String?
+  cnic                String?
+  customerType        CustomerType   @default(REGULAR)
+  status              CustomerStatus @default(ACTIVE)
+  creditLimitPaisa    Int            @default(0) // Integer paisa (0 = no credit unless approved)
+  openingBalancePaisa Int            @default(0) // Integer paisa
+  currentBalancePaisa Int            @default(0) // Running balance: positive = customer owes pharmacy
+  notes               String?
+
+  sales               Sale[]
+  ledgerEntries       CustomerLedgerEntry[]
+  payments            CustomerPayment[]
+
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  @@index([name])
+  @@index([phone])
+  @@index([status])
+  @@map("customers")
+}
+
+model CustomerLedgerEntry {
+  id                  String                  @id @default(uuid())
+  customerId          String
+  entryType           CustomerLedgerEntryType
+  debitPaisa          Int                     @default(0) // Increases customer balance owed (Credit Sale)
+  creditPaisa         Int                     @default(0) // Decreases customer balance owed (Payment, Return)
+  runningBalancePaisa Int
+  referenceType       String                  // "SALE", "SALE_RETURN", "PAYMENT"
+  referenceId         String
+  notes               String?
+  createdById         String?
+  createdAt           DateTime                @default(now())
+
+  customer            Customer                @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([createdAt])
+  @@map("customer_ledger_entries")
+}
+
+model CustomerPayment {
+  id              String        @id @default(uuid())
+  receiptNumber   String        @unique // CPAY-YYYYMM-000001
+  customerId      String
+  paymentDate     DateTime      @default(now())
+  amountPaisa     Int           // Amount in integer paisa
+  paymentMethod   PaymentMethod @default(CASH)
+  referenceNumber String?       // Cheque # or digital transaction reference
+  receivedById    String?
+  receivedByName  String?
+  notes           String?
+  createdAt       DateTime      @default(now())
+
+  customer        Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@index([paymentDate])
+  @@map("customer_payments")
+}
+
+// ─── PHASE 2A: SUPPLIER LEDGER, DEBIT NOTES & EXPIRY CLAIMS ─────────────────
+
+model SupplierLedgerEntry {
+  id                  String                  @id @default(uuid())
+  supplierId          String
+  entryType           SupplierLedgerEntryType
+  creditPaisa         Int                     @default(0) // Increases amount pharmacy owes supplier (Purchase Bill)
+  debitPaisa          Int                     @default(0) // Decreases amount pharmacy owes supplier (Payment, Return, Claim)
+  runningBalancePaisa Int
+  referenceType       String                  // "PURCHASE", "DEBIT_NOTE", "PAYMENT", "EXPIRY_CLAIM"
+  referenceId         String
+  notes               String?
+  createdById         String?
+  createdAt           DateTime                @default(now())
+
+  supplier            Supplier                @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+  @@index([createdAt])
+  @@map("supplier_ledger_entries")
+}
+
+model SupplierPayment {
+  id                   String        @id @default(uuid())
+  voucherNumber        String        @unique // SPAY-YYYYMM-000001
+  supplierId           String
+  paymentDate          DateTime      @default(now())
+  amountPaisa          Int
+  paymentMethod        PaymentMethod @default(BANK_TRANSFER)
+  chequeOrTxNumber     String?
+  adjustedCreditNoteId String?       // Set if adjusting against approved claim credit note
+  paidById             String?
+  paidByName           String?
+  notes                String?
+  createdAt            DateTime      @default(now())
+
+  supplier             Supplier      @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+  @@index([paymentDate])
+  @@map("supplier_payments")
+}
+
+model PurchaseReturnDebitNote {
+  id               String               @id @default(uuid())
+  debitNoteNumber  String               @unique // DN-YYYYMM-000001
+  supplierId       String
+  purchaseId       String?
+  returnDate       DateTime             @default(now())
+  totalAmountPaisa Int                  @default(0)
+  reason           String
+  status           String               @default("CONFIRMED")
+  notes            String?
+  createdById      String?
+  createdAt        DateTime             @default(now())
+
+  supplier         Supplier             @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  items            PurchaseReturnItem[]
+
+  @@index([supplierId])
+  @@index([returnDate])
+  @@map("purchase_return_debit_notes")
+}
+
+model PurchaseReturnItem {
+  id                    String                  @id @default(uuid())
+  debitNoteId           String
+  productId             String
+  productName           String
+  batchId               String
+  batchNumber           String
+  quantitySmallestUnits Int
+  costPricePaisaPerUnit Int
+  totalAmountPaisa      Int
+
+  debitNote             PurchaseReturnDebitNote @relation(fields: [debitNoteId], references: [id], onDelete: Cascade)
+
+  @@index([debitNoteId])
+  @@index([productId])
+  @@index([batchId])
+  @@map("purchase_return_items")
+}
+
+model ExpiryClaim {
+  id                     String            @id @default(uuid())
+  claimNumber            String            @unique // CLM-YYYYMM-000001
+  supplierId             String
+  claimDate              DateTime          @default(now())
+  status                 ExpiryClaimStatus @default(CLAIM_PENDING)
+  totalClaimPaisa        Int               @default(0)
+  creditNoteNumber       String?
+  creditNoteReceivedDate DateTime?
+  creditNoteAmountPaisa  Int?
+  adjustedAt             DateTime?
+  adjustedPaymentId      String?
+  notes                  String?
+  createdById            String?
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+
+  supplier               Supplier          @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  items                  ExpiryClaimItem[]
+
+  @@index([supplierId])
+  @@index([status])
+  @@index([claimDate])
+  @@map("expiry_claims")
+}
+
+model ExpiryClaimItem {
+  id                    String      @id @default(uuid())
+  claimId               String
+  productId             String
+  productName           String
+  batchId               String
+  batchNumber           String
+  expiryDate            DateTime
+  quantitySmallestUnits Int
+  costPricePaisa        Int
+  totalAmountPaisa      Int
+
+  claim                 ExpiryClaim @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  @@index([claimId])
+  @@index([batchId])
+  @@map("expiry_claim_items")
+}
+
+// ─── PHASE 2B: CASH BOOK, EXPENSES, SHIFT CLOSING, COMPLIANCE ───────────────
+
+enum CashBookEntryType {
+  CASH_IN
+  CASH_OUT
+}
+
+enum CashBookCategory {
+  OPENING_BALANCE
+  SALE_CASH
+  CUSTOMER_PAYMENT
+  EXPENSE
+  SUPPLIER_PAYMENT
+  CASH_DROP
+  OTHER
+}
+
+enum ExpenseCategory {
+  UTILITIES
+  SALARIES
+  RENT
+  PACKAGING
+  MAINTENANCE
+  TEA_REFRESHMENT
+  TRANSPORT
+  MARKETING
+  OTHER
+}
+
+enum ShiftClosingStatus {
+  OPEN
+  CLOSED
+  RECONCILED
+}
+
+model CashBookEntry {
+  id                  String             @id @default(uuid())
+  date                DateTime           @default(now())
+  entryType           CashBookEntryType
+  category            CashBookCategory
+  amountPaisa         Int
+  runningBalancePaisa Int
+  description         String
+  referenceType       String?            // "SALE", "CUSTOMER_PAYMENT", "EXPENSE", "SHIFT_CLOSING"
+  referenceId         String?
+  performedById       String?
+  performedByName     String?
+  createdAt           DateTime           @default(now())
+
+  @@index([date])
+  @@index([entryType])
+  @@index([category])
+  @@map("cash_book_entries")
+}
+
+model Expense {
+  id            String          @id @default(uuid())
+  voucherNumber String          @unique // EXP-YYYYMM-000001
+  category      ExpenseCategory
+  amountPaisa   Int
+  paymentMethod PaymentMethod   @default(CASH)
+  expenseDate   DateTime        @default(now())
+  payee         String
+  notes         String?
+  receiptImage  String?
+  createdById   String
+  createdByName String
+  createdAt     DateTime        @default(now())
+
+  @@index([expenseDate])
+  @@index([category])
+  @@map("expenses")
+}
+
+model ShiftClosing {
+  id                        String             @id @default(uuid())
+  closingNumber             String             @unique // SCLS-YYYYMM-000001
+  cashierId                 String
+  cashierName               String
+  shiftStart                DateTime
+  shiftEnd                  DateTime           @default(now())
+  openingCashPaisa          Int                @default(0)
+  cashSalesPaisa            Int                @default(0)
+  customerReceiptsPaisa     Int                @default(0)
+  cashExpensesPaisa         Int                @default(0)
+  supplierCashPaymentsPaisa Int                @default(0)
+  expectedCashPaisa         Int                @default(0)
+  countedCashPaisa          Int                @default(0)
+  differencePaisa           Int                @default(0) // counted - expected (shortage = negative, excess = positive)
+  denominations             Json?
+  status                    ShiftClosingStatus @default(CLOSED)
+  notes                     String?
+  verifiedById              String?
+  verifiedByName            String?
+  createdAt                 DateTime           @default(now())
+
+  @@index([cashierId])
+  @@index([shiftStart])
+  @@index([status])
+  @@map("shift_closings")
+}
+
+model Prescription {
+  id                 String    @id @default(uuid())
+  prescriptionNumber String    @unique // RX-YYYYMM-000001
+  saleId             String?
+  doctorName         String
+  doctorRegNo        String?   // PMDC / PMC Registration number
+  doctorHospital     String?
+  patientName        String
+  patientCnic        String?
+  patientPhone       String?
+  patientAge         Int?
+  patientGender      String?
+  imageUrl           String?   // Base64 or URL
+  notes              String?
+  capturedById       String
+  capturedByName     String
+  createdAt          DateTime  @default(now())
+
+  @@index([prescriptionNumber])
+  @@index([patientName])
+  @@index([doctorName])
+  @@map("prescriptions")
+}
+
+model ControlledDrugRegisterEntry {
+  id                        String    @id @default(uuid())
+  date                      DateTime  @default(now())
+  productId                 String
+  productName               String
+  genericName               String
+  batchNumber               String
+  drugClass                 DrugClass @default(CONTROLLED)
+  movementType              String    // "INFLOW" (Purchase) | "OUTFLOW" (Sale/Dispense)
+  quantitySmallestUnits     Int
+  balanceAfterSmallestUnits Int
+  patientName               String?
+  patientCnic               String?
+  doctorName                String?
+  doctorRegNo               String?
+  prescriptionRef           String?
+  invoiceNumber             String?
+  dispensedByName           String
+  notes                     String?
+  createdAt                 DateTime  @default(now())
+
+  @@index([date])
+  @@index([productId])
+  @@index([drugClass])
+  @@map("controlled_drug_register_entries")
+}
+

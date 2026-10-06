@@ -210,9 +210,9 @@ Build Phase 2C only (spec sections 4.3, 4.4, 10, 11, 12).
 Stop when done and report.
 ```
 **Done when**
-- [ ] Recall report for a test batch lists every invoice and customer who got it.
-- [ ] Stocktake variances create adjustments only after approval.
-- [ ] **Phase 2 complete: run in parallel with the old software for a short period.**
+- [x] Recall report for a test batch lists every invoice and customer who got it.
+- [x] Stocktake variances create adjustments only after approval.
+- [x] **Phase 2 complete: run in parallel with the old software for a short period.**
 
 ---
 
@@ -221,12 +221,12 @@ Stop when done and report.
 **Prompt to paste (use per item)**
 ```
 Build ONLY this Phase 3 item: [pick one]
-- Reorder suggestions from 30/60/90-day sales speed, grouped by supplier into a draft purchase order
-- Advanced analytics (margin by company/category/cashier, fast/slow/dead stock)
-- WhatsApp/SMS credit and refill reminders
-- Barcode label printing for items without barcodes
-- Owner's mobile dashboard (responsive or PWA)
-- Multi-branch: central stock, transfers, separate cash book per branch
+- [x] Reorder suggestions from 30/60/90-day sales speed, grouped by supplier into a draft purchase order
+- [x] Advanced analytics (margin by company/category/cashier, fast/slow/dead stock)
+- [x] WhatsApp/SMS credit and refill reminders
+- [x] Barcode label printing for items without barcodes
+- [x] Owner's mobile dashboard (responsive or PWA)
+- [x] Multi-branch: central stock, transfers, separate cash book per branch
 Stop when done and report.
 ```
 

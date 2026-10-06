@@ -16,6 +16,7 @@ export default {
           text: 'var(--color-text)',         // #14532D
           muted: 'var(--color-muted)',       // #6B8F7B
           warning: 'var(--color-warning)',   // #F59E0B
+          sidebar: 'var(--color-sidebar)',  // #14532D
         },
       },
       borderRadius: {

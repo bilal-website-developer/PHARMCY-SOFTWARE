@@ -18,7 +18,9 @@
     "docker:db:down": "docker compose down",
     "prisma:generate": "npm run prisma:generate --workspace=@pharmacy/api",
     "prisma:migrate": "npm run prisma:migrate --workspace=@pharmacy/api",
-    "prisma:seed": "npm run prisma:seed --workspace=@pharmacy/api"
+    "prisma:seed": "npm run prisma:seed --workspace=@pharmacy/api",
+    "backup": "tsx scripts/backup.ts",
+    "restore": "tsx scripts/restore.ts"
   },
   "devDependencies": {
     "typescript": "^5.4.5"

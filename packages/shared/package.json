@@ -2,15 +2,7 @@
   "name": "@pharmacy/shared",
   "version": "1.0.0",
   "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": "./src/index.ts",
-      "types": "./src/index.ts",
-      "default": "./src/index.ts"
-    }
-  },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit"

@@ -8,9 +8,28 @@ import { DashboardPage } from './pages/DashboardPage';
 import { StyleGuidePage } from './pages/StyleGuidePage';
 import { ProductsPage } from './pages/inventory/ProductsPage';
 import { SuppliersPage } from './pages/inventory/SuppliersPage';
-import { ModulePlaceholderPage } from './pages/ModulePlaceholderPage';
+import { SupplierLedgerPage } from './pages/inventory/SupplierLedgerPage';
+import { PurchasesPage } from './pages/inventory/PurchasesPage';
+import { StockBatchesPage } from './pages/inventory/StockBatchesPage';
+import { POSPage } from './pages/pos/POSPage';
+import { ReturnsPage } from './pages/returns/ReturnsPage';
+import { ReportsPage } from './pages/reports/ReportsPage';
+import { SettingsPage } from './pages/settings/SettingsPage';
+import { CustomersPage } from './pages/customers/CustomersPage';
+import { CustomerLedgerPage } from './pages/customers/CustomerLedgerPage';
+import { AccountsPage } from './pages/accounts/AccountsPage';
+import { CompliancePage } from './pages/compliance/CompliancePage';
+import { StocktakePage } from './pages/inventory/StocktakePage';
+import { BatchRecallPage } from './pages/compliance/BatchRecallPage';
+import { ReorderSuggestionsPage } from './pages/inventory/ReorderSuggestionsPage';
+import { AdvancedAnalyticsPage } from './pages/reports/AdvancedAnalyticsPage';
+import { RemindersPage } from './pages/customers/RemindersPage';
+import { BarcodePrintingPage } from './pages/inventory/BarcodePrintingPage';
+import { BranchesAndTransfersPage } from './pages/branches/BranchesAndTransfersPage';
+import { OwnerMobileDashboardPage } from './pages/OwnerMobileDashboardPage';
 import { ShieldAlert } from 'lucide-react';
 import { Button } from './components/ui/Button';
+
 
 // Authenticated Layout wrapper
 const AuthenticatedLayout: React.FC = () => {
@@ -80,24 +99,48 @@ export const router = createBrowserRouter([
       },
       {
         path: 'style-guide',
-        element: <StyleGuidePage />,
+        element: (
+          <RoleGuard allowedRoles={[UserRole.ADMIN]}>
+            <StyleGuidePage />
+          </RoleGuard>
+        ),
       },
       {
         path: 'pos',
         element: (
           <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.PHARMACIST, UserRole.CASHIER]}>
-            <ModulePlaceholderPage
-              title="Point of Sale (POS) Billing"
-              phase="Phase 1C"
-              description="High-speed keyboard billing, barcode scanning, auto FEFO batch selection, split payments, and 58mm/80mm thermal receipts."
-            />
+            <POSPage />
+          </RoleGuard>
+        ),
+      },
+      {
+        path: 'returns',
+        element: (
+          <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.PHARMACIST, UserRole.CASHIER]}>
+            <ReturnsPage />
+          </RoleGuard>
+        ),
+      },
+      {
+        path: 'customers',
+        element: (
+          <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.PHARMACIST, UserRole.CASHIER, UserRole.ACCOUNTANT]}>
+            <CustomersPage />
+          </RoleGuard>
+        ),
+      },
+      {
+        path: 'customers/:id/ledger',
+        element: (
+          <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.PHARMACIST, UserRole.CASHIER, UserRole.ACCOUNTANT]}>
+            <CustomerLedgerPage />
           </RoleGuard>
         ),
       },
       {
         path: 'products',
         element: (
-          <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.PHARMACIST, UserRole.INVENTORY, UserRole.CASHIER]}>
+          <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.PHARMACIST, UserRole.INVENTORY]}>
             <ProductsPage />
           </RoleGuard>
         ),
@@ -111,14 +154,26 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'suppliers/:id/ledger',
+        element: (
+          <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.PHARMACIST, UserRole.INVENTORY, UserRole.ACCOUNTANT]}>
+            <SupplierLedgerPage />
+          </RoleGuard>
+        ),
+      },
+      {
         path: 'purchases',
         element: (
+          <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.PHARMACIST, UserRole.INVENTORY, UserRole.ACCOUNTANT]}>
+            <PurchasesPage />
+          </RoleGuard>
+        ),
+      },
+      {
+        path: 'reorder-suggestions',
+        element: (
           <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.PHARMACIST, UserRole.INVENTORY]}>
-            <ModulePlaceholderPage
-              title="Purchases & Supplier GRN"
-              phase="Phase 1B"
-              description="Supplier invoices, batch number, expiry warnings, bonus quantity recalculation, and stock movement ledger creation."
-            />
+            <ReorderSuggestionsPage />
           </RoleGuard>
         ),
       },
@@ -126,23 +181,39 @@ export const router = createBrowserRouter([
         path: 'stock',
         element: (
           <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.PHARMACIST, UserRole.INVENTORY]}>
-            <ModulePlaceholderPage
-              title="Batch Stock & Expiry Tracking"
-              phase="Phase 1B"
-              description="Batch-wise inventory, status tracking (Active, Near-Expiry, Expired, Quarantine), and stock movement audit."
-            />
+            <StockBatchesPage />
           </RoleGuard>
         ),
       },
       {
         path: 'accounts',
         element: (
-          <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.ACCOUNTANT]}>
-            <ModulePlaceholderPage
-              title="Accounts & Financial Ledgers"
-              phase="Phase 2A & 2B"
-              description="Customer and supplier ledgers, cash book, shift closing balance, P&L reporting, and tax summaries."
-            />
+          <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.PHARMACIST, UserRole.ACCOUNTANT]}>
+            <AccountsPage />
+          </RoleGuard>
+        ),
+      },
+      {
+        path: 'compliance',
+        element: (
+          <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.PHARMACIST]}>
+            <CompliancePage />
+          </RoleGuard>
+        ),
+      },
+      {
+        path: 'stocktake',
+        element: (
+          <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.PHARMACIST, UserRole.INVENTORY]}>
+            <StocktakePage />
+          </RoleGuard>
+        ),
+      },
+      {
+        path: 'batch-recall',
+        element: (
+          <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.PHARMACIST]}>
+            <BatchRecallPage />
           </RoleGuard>
         ),
       },
@@ -150,11 +221,47 @@ export const router = createBrowserRouter([
         path: 'reports',
         element: (
           <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.PHARMACIST, UserRole.ACCOUNTANT]}>
-            <ModulePlaceholderPage
-              title="Reports & Audit Trails"
-              phase="Phase 1D"
-              description="Daily sales, cashier performance, discount analysis, return records, and immutable audit logs."
-            />
+            <ReportsPage />
+          </RoleGuard>
+        ),
+      },
+      {
+        path: 'analytics',
+        element: (
+          <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.PHARMACIST, UserRole.ACCOUNTANT]}>
+            <AdvancedAnalyticsPage />
+          </RoleGuard>
+        ),
+      },
+      {
+        path: 'reminders',
+        element: (
+          <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.PHARMACIST]}>
+            <RemindersPage />
+          </RoleGuard>
+        ),
+      },
+      {
+        path: 'barcode-printing',
+        element: (
+          <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.PHARMACIST, UserRole.INVENTORY]}>
+            <BarcodePrintingPage />
+          </RoleGuard>
+        ),
+      },
+      {
+        path: 'branches',
+        element: (
+          <RoleGuard allowedRoles={[UserRole.ADMIN, UserRole.PHARMACIST, UserRole.INVENTORY]}>
+            <BranchesAndTransfersPage />
+          </RoleGuard>
+        ),
+      },
+      {
+        path: 'owner-mobile',
+        element: (
+          <RoleGuard allowedRoles={[UserRole.ADMIN]}>
+            <OwnerMobileDashboardPage />
           </RoleGuard>
         ),
       },
@@ -162,11 +269,7 @@ export const router = createBrowserRouter([
         path: 'settings',
         element: (
           <RoleGuard allowedRoles={[UserRole.ADMIN]}>
-            <ModulePlaceholderPage
-              title="System Configuration & Settings"
-              phase="Phase 1D"
-              description="Database-driven configuration: expiry warning threshold, role discount limits, loose selling rules, and receipt headers."
-            />
+            <SettingsPage />
           </RoleGuard>
         ),
       },

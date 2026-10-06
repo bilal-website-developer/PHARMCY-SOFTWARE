@@ -9,7 +9,7 @@ import {
 } from '@pharmacy/shared';
 
 // Demo initial products dataset used if DB is offline or before seed
-const SEED_PRODUCTS = [
+export const SEED_PRODUCTS = [
   {
     id: 'prod-1',
     sku: 'MED-PAN-500',
@@ -18,8 +18,8 @@ const SEED_PRODUCTS = [
     genericName: 'Paracetamol',
     strength: '500mg',
     dosageForm: 'Tablet',
-    drugClass: DrugClass.OTC,
-    storageCondition: StorageCondition.ROOM_TEMPERATURE,
+    drugClass: 'OTC',
+    storageCondition: 'ROOM_TEMPERATURE',
     categoryId: 'cat-2',
     categoryName: 'Analgesics & Antipyretics',
     companyId: 'comp-1',
@@ -31,7 +31,7 @@ const SEED_PRODUCTS = [
     currentStock: 1250,
     rackLocation: 'Rack A-01',
     taxRatePct: 0.0,
-    status: ProductStatus.ACTIVE,
+    status: 'ACTIVE',
     requiresPrescription: false,
     isLooseSellingEnabled: true,
     loosePricePaisa: 350, // Rs 3.50 per tablet
@@ -53,8 +53,8 @@ const SEED_PRODUCTS = [
     genericName: 'Paracetamol', // Substitute of Panadol 500mg!
     strength: '500mg',
     dosageForm: 'Tablet',
-    drugClass: DrugClass.OTC,
-    storageCondition: StorageCondition.ROOM_TEMPERATURE,
+    drugClass: 'OTC',
+    storageCondition: 'ROOM_TEMPERATURE',
     categoryId: 'cat-2',
     categoryName: 'Analgesics & Antipyretics',
     companyId: 'comp-1',
@@ -66,7 +66,7 @@ const SEED_PRODUCTS = [
     currentStock: 480,
     rackLocation: 'Rack A-02',
     taxRatePct: 0.0,
-    status: ProductStatus.ACTIVE,
+    status: 'ACTIVE',
     requiresPrescription: false,
     isLooseSellingEnabled: true,
     loosePricePaisa: 350,
@@ -88,8 +88,8 @@ const SEED_PRODUCTS = [
     genericName: 'Amoxicillin + Clavulanic Acid',
     strength: '625mg',
     dosageForm: 'Tablet',
-    drugClass: DrugClass.RX,
-    storageCondition: StorageCondition.ROOM_TEMPERATURE,
+    drugClass: 'RX',
+    storageCondition: 'ROOM_TEMPERATURE',
     categoryId: 'cat-1',
     categoryName: 'Antibiotics',
     companyId: 'comp-1',
@@ -101,7 +101,7 @@ const SEED_PRODUCTS = [
     currentStock: 180,
     rackLocation: 'Rack B-05',
     taxRatePct: 0.0,
-    status: ProductStatus.ACTIVE,
+    status: 'ACTIVE',
     requiresPrescription: true,
     isLooseSellingEnabled: true,
     loosePricePaisa: 3800, // Rs 38.00 per tablet
@@ -123,8 +123,8 @@ const SEED_PRODUCTS = [
     genericName: 'Amoxicillin + Clavulanic Acid', // Substitute of Augmentin 625mg!
     strength: '625mg',
     dosageForm: 'Tablet',
-    drugClass: DrugClass.RX,
-    storageCondition: StorageCondition.ROOM_TEMPERATURE,
+    drugClass: 'RX',
+    storageCondition: 'ROOM_TEMPERATURE',
     categoryId: 'cat-1',
     categoryName: 'Antibiotics',
     companyId: 'comp-2',
@@ -136,7 +136,7 @@ const SEED_PRODUCTS = [
     currentStock: 95,
     rackLocation: 'Rack B-06',
     taxRatePct: 0.0,
-    status: ProductStatus.ACTIVE,
+    status: 'ACTIVE',
     requiresPrescription: true,
     isLooseSellingEnabled: true,
     loosePricePaisa: 3400,
@@ -158,8 +158,8 @@ const SEED_PRODUCTS = [
     genericName: 'Omeprazole',
     strength: '20mg',
     dosageForm: 'Capsule',
-    drugClass: DrugClass.OTC,
-    storageCondition: StorageCondition.ROOM_TEMPERATURE,
+    drugClass: 'OTC',
+    storageCondition: 'ROOM_TEMPERATURE',
     categoryId: 'cat-4',
     categoryName: 'Gastrointestinal',
     companyId: 'comp-2',
@@ -171,7 +171,7 @@ const SEED_PRODUCTS = [
     currentStock: 340,
     rackLocation: 'Rack C-01',
     taxRatePct: 0.0,
-    status: ProductStatus.ACTIVE,
+    status: 'ACTIVE',
     requiresPrescription: false,
     isLooseSellingEnabled: true,
     loosePricePaisa: 2800, // Rs 28.00 per capsule
@@ -192,8 +192,8 @@ const SEED_PRODUCTS = [
     genericName: 'Atorvastatin',
     strength: '20mg',
     dosageForm: 'Tablet',
-    drugClass: DrugClass.RX,
-    storageCondition: StorageCondition.ROOM_TEMPERATURE,
+    drugClass: 'RX',
+    storageCondition: 'ROOM_TEMPERATURE',
     categoryId: 'cat-3',
     categoryName: 'Cardiovascular',
     companyId: 'comp-2',
@@ -205,7 +205,7 @@ const SEED_PRODUCTS = [
     currentStock: 80,
     rackLocation: 'Rack C-08',
     taxRatePct: 0.0,
-    status: ProductStatus.ACTIVE,
+    status: 'ACTIVE',
     requiresPrescription: true,
     isLooseSellingEnabled: true,
     loosePricePaisa: 3200,
@@ -226,8 +226,8 @@ const SEED_PRODUCTS = [
     genericName: 'Alprazolam',
     strength: '0.5mg',
     dosageForm: 'Tablet',
-    drugClass: DrugClass.CONTROLLED,
-    storageCondition: StorageCondition.ROOM_TEMPERATURE,
+    drugClass: 'CONTROLLED',
+    storageCondition: 'ROOM_TEMPERATURE',
     categoryId: 'cat-2',
     categoryName: 'Analgesics & Antipyretics',
     companyId: 'comp-3',
@@ -239,7 +239,7 @@ const SEED_PRODUCTS = [
     currentStock: 45,
     rackLocation: 'Safe Lock Box A',
     taxRatePct: 0.0,
-    status: ProductStatus.ACTIVE,
+    status: 'ACTIVE',
     requiresPrescription: true,
     isLooseSellingEnabled: false,
     loosePricePaisa: null,
@@ -254,12 +254,12 @@ const SEED_PRODUCTS = [
 ];
 
 // In-memory price history store for fallback
-const MEMORY_PRICE_HISTORY: Record<string, any[]> = {};
+export const MEMORY_PRICE_HISTORY: Record<string, any[]> = {};
 
 /**
  * Filter out cost and purchase price fields when requesting user is CASHIER
  */
-function sanitizeProductForRole(product: any, role?: string) {
+export function sanitizeProductForRole(product: any, role?: string) {
   if (role === 'CASHIER') {
     const { costPricePaisa, ...sanitized } = product;
     if (sanitized.priceHistory) {

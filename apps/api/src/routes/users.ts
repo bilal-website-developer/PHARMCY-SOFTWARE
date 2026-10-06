@@ -7,7 +7,7 @@ export async function userRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/',
     {
-      preHandler: [fastify.requireRole([UserRole.ADMIN])],
+      preHandler: [fastify.requireRole(['ADMIN'])],
     },
     async (request, reply) => {
       const users = await prisma.user.findMany({
@@ -34,7 +34,7 @@ export async function userRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/audit-logs',
     {
-      preHandler: [fastify.requireRole([UserRole.ADMIN])],
+      preHandler: [fastify.requireRole(['ADMIN'])],
     },
     async (request, reply) => {
       const logs = await prisma.auditLog.findMany({

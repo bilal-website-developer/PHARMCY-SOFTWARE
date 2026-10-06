@@ -10,11 +10,18 @@ import {
   BarChart3,
   Palette,
   Sliders,
+  RotateCcw,
   Menu,
   X,
   LogOut,
   ShieldCheck,
   User,
+  Users,
+  ClipboardCheck,
+  AlertTriangle,
+  TrendingUp,
+  MessageSquare,
+  Printer,
 } from 'lucide-react';
 import { getNavForRole, ROLE_LABELS, UserRole } from '@pharmacy/shared';
 import { useAuthStore, DEMO_USERS } from '../../stores/authStore';
@@ -23,14 +30,33 @@ import { Badge } from '../ui/Badge';
 const ICON_MAP: Record<string, React.ReactNode> = {
   LayoutDashboard: <LayoutDashboard className="w-4 h-4 shrink-0" />,
   ShoppingCart: <ShoppingCart className="w-4 h-4 shrink-0" />,
+  RotateCcw: <RotateCcw className="w-4 h-4 shrink-0" />,
+  Users: <Users className="w-4 h-4 shrink-0" />,
   Pill: <Pill className="w-4 h-4 shrink-0" />,
   Truck: <Truck className="w-4 h-4 shrink-0" />,
   PackageSearch: <PackageSearch className="w-4 h-4 shrink-0" />,
+  ClipboardCheck: <ClipboardCheck className="w-4 h-4 shrink-0" />,
+  AlertTriangle: <AlertTriangle className="w-4 h-4 shrink-0" />,
   Receipt: <Receipt className="w-4 h-4 shrink-0" />,
   BarChart3: <BarChart3 className="w-4 h-4 shrink-0" />,
   Palette: <Palette className="w-4 h-4 shrink-0" />,
   Sliders: <Sliders className="w-4 h-4 shrink-0" />,
+  ShieldCheck: <ShieldCheck className="w-4 h-4 shrink-0" />,
+  TrendingUp: <TrendingUp className="w-4 h-4 shrink-0" />,
+  MessageSquare: <MessageSquare className="w-4 h-4 shrink-0" />,
+  Printer: <Printer className="w-4 h-4 shrink-0" />,
 };
+
+const NAV_GROUP_ORDER = [
+  'Overview',
+  'Sales',
+  'Catalog',
+  'People',
+  'Purchasing',
+  'Finance',
+  'Compliance',
+  'Admin',
+];
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -47,6 +73,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children, pageTitle }) => {
   // Compute allowed navigation items for the current user's role
   const userRole = user?.role || UserRole.CASHIER;
   const navItems = getNavForRole(userRole);
+  const navGroups = navItems.reduce<Record<string, typeof navItems>>((groups, item) => {
+    (groups[item.group] ||= []).push(item);
+    return groups;
+  }, {});
 
   const currentPageTitle =
     pageTitle ||
@@ -57,10 +87,10 @@ export const AppShell: React.FC<AppShellProps> = ({ children, pageTitle }) => {
     <div className="min-h-screen flex flex-col bg-pharma-surface">
       {/* -------------------------------------------------------------
           TOP GREEN HEADER STRIP
-          Per specification: Green header strip (#15803D),
+          Per specification: Dark green header strip (#14532D),
           page title left, logged-in role right.
           ------------------------------------------------------------- */}
-      <header className="bg-pharma-primary text-pharma-white h-14 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40 shadow-pharma-sm border-b border-pharma-primary">
+      <header className="bg-pharma-sidebar text-pharma-white h-14 px-4 sm:px-6 flex items-center justify-between sticky top-0 z-40 shadow-pharma-sm border-b border-pharma-sidebar">
         {/* Left: Mobile hamburger + Pharmacy Logo + Page Title */}
         <div className="flex items-center gap-3">
           <button
@@ -116,9 +146,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children, pageTitle }) => {
                         switchDemoRole(r);
                         setRoleSwitcherOpen(false);
                       }}
-                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-pharma-surface transition-colors ${
-                        userRole === r ? 'font-bold text-pharma-primary bg-pharma-surface' : 'text-pharma-text'
-                      }`}
+                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-pharma-surface transition-colors ${userRole === r ? 'font-bold text-pharma-primary bg-pharma-surface' : 'text-pharma-text'
+                        }`}
                     >
                       <span>{ROLE_LABELS[r]}</span>
                       {userRole === r && <span className="text-[10px] text-pharma-primary font-bold">✓ Active</span>}
@@ -154,11 +183,11 @@ export const AppShell: React.FC<AppShellProps> = ({ children, pageTitle }) => {
           MAIN LAYOUT CONTAINER (Sidebar on Surface + Content)
           ------------------------------------------------------------- */}
       <div className="flex-1 flex flex-col md:flex-row">
-        {/* Sidebar on Surface Colour (#F0FDF4) */}
+        {/* Dark green sidebar */}
         <aside
           className={`
             fixed md:static inset-y-14 left-0 z-30
-            w-64 bg-pharma-surface border-r border-pharma-muted/20
+            w-64 bg-pharma-sidebar text-pharma-white border-r border-pharma-white/15
             p-4 flex flex-col justify-between shrink-0
             transition-transform duration-200 ease-in-out
             ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
@@ -181,58 +210,62 @@ export const AppShell: React.FC<AppShellProps> = ({ children, pageTitle }) => {
             </div>
 
             {/* Role-Aware Navigation Menu */}
-            <nav className="space-y-1">
-              <div className="text-[11px] font-bold uppercase tracking-wider text-pharma-muted px-2 py-1 select-none">
-                Navigation
-              </div>
-              {navItems.map((item) => {
-                const isActive = location.pathname === item.path;
-                return (
-                  <Link
-                    key={item.id}
-                    to={item.path}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={`
-                      flex items-center justify-between px-3 py-2.5 rounded-pharma text-xs font-semibold
-                      transition-all duration-150 group
-                      ${
-                        isActive
-                          ? 'bg-pharma-primary text-pharma-white shadow-sm'
-                          : 'text-pharma-text/80 hover:bg-pharma-white hover:text-pharma-primary'
-                      }
-                    `}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span className={isActive ? 'text-pharma-white' : 'text-pharma-muted group-hover:text-pharma-primary'}>
-                        {ICON_MAP[item.icon] || <Pill className="w-4 h-4" />}
-                      </span>
-                      <span>{item.title}</span>
-                    </div>
+            <nav className="space-y-4">
+              {NAV_GROUP_ORDER.filter((group) => navGroups[group]).map((group) => (
+                <section key={group} aria-label={group}>
+                  <h2 className="text-[11px] font-bold uppercase tracking-wider text-pharma-white/70 px-2 py-1 select-none">
+                    {group}
+                  </h2>
+                  <div className="space-y-1">
+                    {navGroups[group].map((item) => {
+                      const isActive = location.pathname === item.path;
+                      return (
+                        <Link
+                          key={item.id}
+                          to={item.path}
+                          onClick={() => setMobileMenuOpen(false)}
+                          className={`
+                            flex items-center justify-between px-3 py-2.5 rounded-pharma text-xs font-semibold
+                            transition-all duration-150 group
+                            ${isActive
+                              ? 'bg-pharma-primary text-pharma-white shadow-sm'
+                              : 'text-pharma-white/85 hover:bg-pharma-white hover:text-pharma-sidebar'
+                            }
+                          `}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className={isActive ? 'text-pharma-white' : 'text-pharma-white/70 group-hover:text-pharma-sidebar'}>
+                              {ICON_MAP[item.icon] || <Pill className="w-4 h-4" />}
+                            </span>
+                            <span>{item.title}</span>
+                          </div>
 
-                    {item.badge && (
-                      <span
-                        className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${
-                          isActive ? 'bg-white/20 text-white' : 'bg-pharma-accent/20 text-pharma-text'
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
+                          {item.badge && (
+                            <span
+                              className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${isActive ? 'bg-white/20 text-white' : 'bg-pharma-accent/20 text-pharma-text'
+                                }`}
+                            >
+                              {item.badge}
+                            </span>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </section>
+              ))}
             </nav>
           </div>
 
           {/* Sidebar Footer: System Status */}
-          <div className="pt-4 border-t border-pharma-muted/20 space-y-2">
-            <div className="flex items-center justify-between text-[11px] text-pharma-muted">
+          <div className="pt-4 border-t border-pharma-white/15 space-y-2">
+            <div className="flex items-center justify-between text-[11px] text-pharma-white/70">
               <span>System Currency</span>
-              <span className="font-semibold text-pharma-text">PKR (Paisa)</span>
+              <span className="font-semibold text-pharma-white">PKR (Paisa)</span>
             </div>
-            <div className="flex items-center justify-between text-[11px] text-pharma-muted">
+            <div className="flex items-center justify-between text-[11px] text-pharma-white/70">
               <span>Date Format</span>
-              <span className="font-semibold text-pharma-text">DD/MM/YYYY</span>
+              <span className="font-semibold text-pharma-white">DD/MM/YYYY</span>
             </div>
             <Link
               to="/style-guide"

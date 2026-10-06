@@ -4,14 +4,27 @@
 
 :root {
   /* THEME TOKENS: Pharma Green - Defined ONCE here */
-  --color-primary: #15803D;
-  --color-accent: #22C55E;
-  --color-surface: #F0FDF4;
-  --color-white: #FFFFFF;
-  --color-danger: #DC2626;
-  --color-text: #14532D;
-  --color-muted: #6B8F7B;
-  --color-warning: #F59E0B;
+  --primary: #15803D;
+  --accent: #22C55E;
+  --surface: #F0FDF4;
+  --white: #FFFFFF;
+  --danger: #DC2626;
+  --text: #14532D;
+  --muted: #6B8F7B;
+  --warning: #F59E0B;
+  --border: #D1E7D8;
+  --sidebar: var(--text);
+
+  /* Backwards-compatible aliases used by the current design system */
+  --color-primary: var(--primary);
+  --color-accent: var(--accent);
+  --color-surface: var(--surface);
+  --color-white: var(--white);
+  --color-danger: var(--danger);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-warning: var(--warning);
+  --color-sidebar: var(--sidebar);
 
   --radius-default: 12px;
 }
@@ -30,6 +43,7 @@
 
 /* Custom utility components matching the Pharma specification */
 @layer components {
+
   /* White rounded rows inside a pale-green panel */
   .pharma-panel {
     background-color: var(--color-surface);
@@ -58,5 +72,20 @@
     gap: 0.75rem;
     width: 100%;
     margin-top: 1.5rem;
+  }
+
+  /* POS full-height layout (removes inner scroll so cart can flex correctly) */
+  .pos-layout {
+    height: calc(100vh - 4rem);
+    /* subtract header bar */
+  }
+}
+
+/* ── Thermal Receipt Print Styles ─────────────────────────────────────────── */
+@media print {
+
+  /* Hide everything except the receipt window content */
+  body>*:not(.receipt-print-root) {
+    display: none !important;
   }
 }
